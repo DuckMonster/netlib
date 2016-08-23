@@ -3,6 +3,8 @@
 #include <queue>
 #include <thread>
 #include <mutex>
+#include <idarray.hpp>
+
 #include "event.hpp"
 
 namespace net {
@@ -15,7 +17,7 @@ namespace net {
         void                shutdown( );
         bool                active( );
 
-        bool                pollEvent( event& ev );
+        bool                pollEvent( net::event& e );
 
     private:
         SOCKET              acceptSocket;
@@ -24,7 +26,7 @@ namespace net {
 
         std::queue<event>   eventQueue;
 
-        std::queue<SOCKET>  acceptQueue;
+        idarray<SOCKET>     clientArray;
         std::mutex          acceptMutex;
         std::thread         acceptThread;
 

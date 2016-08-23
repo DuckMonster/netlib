@@ -13,44 +13,55 @@ namespace net {
 
     class event {
     public:
+        struct connectData {
+            connectData( ) : id( -1 ) { }
+            connectData( size_t id ) : id( id ) { }
+            size_t id;
+        };
+
+        struct disconnectData {
+            disconnectData( ) : id( -1 ) { }
+            disconnectData( size_t id ) : id( id ) { }
+            size_t id;
+        };
+
+        struct packetData {
+            packetData( ) { }
+        };
+
+        struct errorData {
+            errorData( ) : message( ), code( -1 ) { }
+            errorData( std::string message, int code = 0 ) : message( message ), code( code ) { }
+            std::string message;
+            int code;
+        };
+
         event( ) : type( eNone ) { }
-        event( EventType eType ) : type( eType ) { }
+        event( connectData dConnect ) :
+            type( eConnect ),
+            dConnect( dConnect ) {
+        }
+
+        event( disconnectData dDisconnect ) :
+            type( eDisconnect ),
+            dDisconnect( dDisconnect ) {
+        }
+
+        event( packetData dPacket ) :
+            type( ePacket ),
+            dPacket( dPacket ) {
+        }
+
+        event( errorData dError ) :
+            type( eError ),
+            dError( dError ) {
+        }
 
         EventType       type;
-    };
 
-    class event_connect : event {
-    public:
-        event_connect( size_t id ) : event( eConnect ),
-            id( id ) {
-        }
-
-        size_t          id;
-    };
-
-    class event_disconnect : event {
-    public:
-        event_disconnect( size_t id ) : event( eDisconnect ),
-            id( id ) {
-        }
-
-        size_t          id;
-    };
-
-    class event_packet : event {
-    public:
-        event_packet( ) : event( ePacket ) {
-        }
-    };
-
-    class event_error : event {
-    public:
-        event_error( std::string message, int code ) : event( eError ),
-            message( message ),
-            code( code ) {
-        }
-
-        std::string     message;
-        int             code;
+        connectData     dConnect;
+        disconnectData  dDisconnect;
+        packetData      dPacket;
+        errorData       dError;
     };
 }
