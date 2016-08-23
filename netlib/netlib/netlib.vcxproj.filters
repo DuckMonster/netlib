@@ -21,12 +21,24 @@
     <ClCompile Include="event.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="sockethandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="packet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="server.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="event.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sockethandler.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="packet.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

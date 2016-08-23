@@ -118,11 +118,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="event.cpp" />
+    <ClCompile Include="packet.cpp" />
     <ClCompile Include="server.cpp" />
+    <ClCompile Include="sockethandler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="event.hpp" />
+    <ClInclude Include="packet.hpp" />
     <ClInclude Include="server.hpp" />
+    <ClInclude Include="sockethandler.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
