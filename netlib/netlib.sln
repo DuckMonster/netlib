@@ -5,7 +5,9 @@ VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "netlib", "netlib\netlib.vcxproj", "{39795EEA-FED1-4067-9E4B-18D8513EB9C4}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "netlib_impl", "netlib_impl\netlib_impl.vcxproj", "{C23C2940-CBC9-4B47-B4B5-5790694CB659}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "netlib_serv_impl", "netlib_impl\netlib_impl.vcxproj", "{C23C2940-CBC9-4B47-B4B5-5790694CB659}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "netlib_cli_impl", "netlib_cli_impl\netlib_cli_impl.vcxproj", "{3BBCF4B2-41C5-4439-8544-A0E866517A99}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +33,14 @@ Global
 		{C23C2940-CBC9-4B47-B4B5-5790694CB659}.Release|x64.Build.0 = Release|x64
 		{C23C2940-CBC9-4B47-B4B5-5790694CB659}.Release|x86.ActiveCfg = Release|Win32
 		{C23C2940-CBC9-4B47-B4B5-5790694CB659}.Release|x86.Build.0 = Release|Win32
+		{3BBCF4B2-41C5-4439-8544-A0E866517A99}.Debug|x64.ActiveCfg = Debug|x64
+		{3BBCF4B2-41C5-4439-8544-A0E866517A99}.Debug|x64.Build.0 = Debug|x64
+		{3BBCF4B2-41C5-4439-8544-A0E866517A99}.Debug|x86.ActiveCfg = Debug|Win32
+		{3BBCF4B2-41C5-4439-8544-A0E866517A99}.Debug|x86.Build.0 = Debug|Win32
+		{3BBCF4B2-41C5-4439-8544-A0E866517A99}.Release|x64.ActiveCfg = Release|x64
+		{3BBCF4B2-41C5-4439-8544-A0E866517A99}.Release|x64.Build.0 = Release|x64
+		{3BBCF4B2-41C5-4439-8544-A0E866517A99}.Release|x86.ActiveCfg = Release|Win32
+		{3BBCF4B2-41C5-4439-8544-A0E866517A99}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

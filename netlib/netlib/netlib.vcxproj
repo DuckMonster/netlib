@@ -121,9 +121,11 @@
     <ClCompile Include="packet.cpp" />
     <ClCompile Include="server.cpp" />
     <ClCompile Include="sockethandler.cpp" />
+    <ClCompile Include="client.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bufferedqueue.hpp" />
+    <ClInclude Include="client.hpp" />
     <ClInclude Include="event.hpp" />
     <ClInclude Include="packet.hpp" />
     <ClInclude Include="server.hpp" />
