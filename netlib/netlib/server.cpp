@@ -108,6 +108,7 @@ void net::server::update( ) {
             // Disconnect
             if (!ptr->connected( )) {
                 eventQueue.push( event( event::disconnectData( i ) ) );
+                clientArray[i] = nullptr;
                 clientArray.remove( i );
                 continue;
             }
