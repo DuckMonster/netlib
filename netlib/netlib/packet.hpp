@@ -4,6 +4,7 @@
 namespace net {
     class packet {
     public:
+        packet( );
         packet( const char* ptr, const size_t& size );
         packet( const packet& other );
         ~packet( );

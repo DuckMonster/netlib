@@ -4,32 +4,39 @@
 #include <thread>
 #include <mutex>
 #include <idarray.hpp>
+#include <memory>
 
 #include "event.hpp"
+#include "sockethandler.hpp"
+
 
 namespace net {
+    typedef std::shared_ptr<socketworker> worker_ptr;
+
     class server {
     public:
         server( );
         ~server( );
 
-        void                startup( short port );
-        void                shutdown( );
-        bool                active( );
+        void                    startup( short port );
+        void                    shutdown( );
+        bool                    active( );
 
-        bool                pollEvent( net::event& e );
+        server&                 send( const size_t& id, const packet& pkt );
+
+        bool                    pollEvent( net::event& e );
 
     private:
-        SOCKET              acceptSocket;
+        SOCKET                  acceptSocket;
 
         //-----------------------
 
-        std::queue<event>   eventQueue;
+        std::queue<event>       eventQueue;
 
-        idarray<SOCKET>     clientArray;
-        std::mutex          acceptMutex;
-        std::thread         acceptThread;
+        idarray<worker_ptr>     clientArray;
+        std::mutex              acceptMutex;
+        std::thread             acceptThread;
 
-        void                acceptLoop( );
+        void                    acceptLoop( );
     };
 }

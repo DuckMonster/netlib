@@ -3,9 +3,12 @@
 #include <WS2tcpip.h>
 #include <string>
 #include <iostream>
+#include <array>
+
+using namespace std;
 
 void startupErr( const char* func, const int& code ) {
-    std::cerr << "Error in " << func << ": " << code << "\n";
+    cerr << "Error in " << func << ": " << code << "\n";
 }
 
 net::server::server( ) :
@@ -40,7 +43,7 @@ void net::server::startup( short port ) {
     hints.ai_socktype   = SOCK_STREAM;
     hints.ai_flags      = AI_PASSIVE;
 
-    iResult = getaddrinfo( NULL, std::to_string( port ).c_str( ), &hints, &result );
+    iResult = getaddrinfo( NULL, to_string( port ).c_str( ), &hints, &result );
     if (iResult != 0) {
         startupErr( "getaddrinfo", iResult );
         return;
@@ -54,9 +57,9 @@ void net::server::startup( short port ) {
         return;
     }
 
-    iResult = bind( acceptSocket, result->ai_addr, result->ai_addrlen );
+    iResult = ::bind( acceptSocket, result->ai_addr, result->ai_addrlen );
     if (iResult == SOCKET_ERROR) {
-        startupErr( "bind", WSAGetLastError() );
+        startupErr( "bind", WSAGetLastError( ) );
         freeaddrinfo( result );
         return;
     }
@@ -66,12 +69,12 @@ void net::server::startup( short port ) {
     // Then set as a listening socket
     iResult = listen( acceptSocket, 5 );
     if (iResult == SOCKET_ERROR) {
-        startupErr( "listen", WSAGetLastError() );
+        startupErr( "listen", WSAGetLastError( ) );
         return;
     }
 
     // Start up accepting threads
-    acceptThread = std::thread( &server::acceptLoop, this );
+    acceptThread = thread( &server::acceptLoop, this );
 }
 
 void net::server::shutdown( ) {
@@ -85,14 +88,26 @@ bool net::server::active( ) {
     return acceptSocket != INVALID_SOCKET;
 }
 
+net::server & net::server::send( const size_t & id, const packet & pkt ) {
+    // Client ID doesn't exist, or isn't allocated
+    if (!clientArray.contains( id ) || !clientArray[id])
+        return *this;
+
+    clientArray[id]->send( pkt );
+}
+
 bool net::server::pollEvent( net::event& e ) {
-    std::lock_guard<std::mutex> lock( acceptMutex );
+    lock_guard<mutex> lock( acceptMutex );
 
     if (eventQueue.empty( ))
         return false;
 
     e = eventQueue.front( );
     eventQueue.pop( );
+
+    // Handle disconnect events
+    if (e.type == eDisconnect)
+        clientArray.remove( e.dDisconnect.id );
 
     return true;
 }
@@ -108,10 +123,20 @@ void net::server::acceptLoop( ) {
 
         // Lock and push the new client onto accept queue
         {
-            std::lock_guard<std::mutex> lock( acceptMutex );
+            lock_guard<mutex> lock( acceptMutex );
 
-            // Add to list
-            size_t newID = clientArray.insert( newClient );
+            SOCKADDR_IN cAddr;
+            int cAddrLen = sizeof( cAddr );
+
+            getpeername( newClient, (sockaddr*)&cAddr, &cAddrLen );
+
+            char addrbuf[512];
+            InetNtop( cAddr.sin_family, &cAddr.sin_addr, addrbuf, 512 );
+
+            cout << "Connection from " << addrbuf << ":" << cAddr.sin_port << "\n";
+
+            size_t newID = clientArray.insert( worker_ptr( ) );
+            clientArray[newID] = worker_ptr( new socketworker( newClient, eventQueue, newID ) );
 
             // Add a connect event to queue
             eventQueue.push( net::event( net::event::connectData( newID ) ) );

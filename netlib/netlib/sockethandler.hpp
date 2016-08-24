@@ -5,11 +5,15 @@
 #include <mutex>
 
 #include "packet.hpp"
+#include "event.hpp"
 
 namespace net {
     class socketworker {
     public:
-        socketworker( SOCKET socket );
+        socketworker( SOCKET socket, std::queue<net::event>& eventQueue, const size_t& id );
+        ~socketworker( );
+
+        void                    disconnect( );
 
         void                    send( const packet& pkt );
         bool                    connected( );
@@ -23,6 +27,9 @@ namespace net {
         std::queue<packet>&     backSendQueue( );
 
         SOCKET                  socket;
+        const size_t            connectionID;
+
+        std::queue<net::event>& eventQueue;
 
         std::thread             sendThread;
         std::thread             recvThread;

@@ -1,20 +1,47 @@
 #include "sockethandler.hpp"
 
-using namespace net;
+#include <iostream>
 
-socketworker::socketworker( SOCKET socket ) :
+using namespace net;
+using namespace std;
+
+socketworker::socketworker( SOCKET socket, queue<event>& eventQueue, const size_t& id ) :
     socket( socket ),
+    eventQueue( eventQueue ),
+    connectionID( id ),
     sendThread( ),
     recvThread( ) {
 
     // Startup worker threads
-    sendThread = std::thread( &socketworker::sendLoop, this );
-    recvThread = std::thread( &socketworker::recvLoop, this );
+    sendThread = thread( &socketworker::sendLoop, this );
+    recvThread = thread( &socketworker::recvLoop, this );
+}
+
+net::socketworker::~socketworker( ) {
+    disconnect( );
+
+    sendThread.join( );
+    recvThread.join( );
+}
+
+void net::socketworker::disconnect( ) {
+    if (!connected( ))
+        return;
+
+    // Add event
+    eventQueue.push( event( event::disconnectData( connectionID ) ) );
+
+    // Shutdown peacefully
+    shutdown( socket, SD_BOTH );
+    closesocket( socket );
+
+    // Set socket as invalid
+    socket = INVALID_SOCKET;
 }
 
 void socketworker::send( const packet & pkt ) {
     // Lock
-    std::lock_guard<std::mutex> lock( sendMtx );
+    lock_guard<mutex> lock( sendMtx );
 
     // Push onto front queue
     frontSendQueue( ).push( pkt );
@@ -42,11 +69,11 @@ void socketworker::sendLoop( ) {
             sendMtx.unlock( ); // UNLOCK
 
         //TODO: Don't sleep, implement conditional variables instead
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+        this_thread::sleep_for( chrono::milliseconds( 1 ) );
     }
 }
 
-void socketworker::sendAll( std::queue<packet>& queue ) {
+void socketworker::sendAll( queue<packet>& queue ) {
     // Send all packets in queue
     while (!queue.empty( )) {
         packet& pkt = queue.front( );
@@ -58,14 +85,31 @@ void socketworker::sendAll( std::queue<packet>& queue ) {
 
 void socketworker::recvLoop( ) {
     while (connected( )) {
+        char buffer[512];
+        std::cout << "starting recv: " << socket << "\n";
 
+        size_t received = ::recv( socket, buffer, 512, 0 );
+
+        std::cout << "recv\n";
+
+        if (received == 0 || received == SOCKET_ERROR) {
+            if (received == SOCKET_ERROR)
+                eventQueue.push( event( event::errorData( "recv", WSAGetLastError( ) ) ) );
+
+            disconnect( );
+            return;
+        }
+        {
+            packet pkt( buffer, received );
+            eventQueue.push( event( event::packetData( pkt, connectionID ) ) );
+        }
     }
 }
 
-std::queue<packet>& socketworker::frontSendQueue( ) {
+queue<packet>& socketworker::frontSendQueue( ) {
     return sendQueues[sendQueueIndex % 2];
 }
 
-std::queue<packet>& socketworker::backSendQueue( ) {
+queue<packet>& socketworker::backSendQueue( ) {
     return sendQueues[(sendQueueIndex + 1) % 2];
 }

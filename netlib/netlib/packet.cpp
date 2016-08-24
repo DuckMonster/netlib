@@ -2,20 +2,24 @@
 
 using namespace net;
 
-packet::packet( const char* ptr, const size_t& size ) :
+packet::packet( ) :
     memPtr( nullptr ),
     memSize( 0 ) {
+}
+
+packet::packet( const char* ptr, const size_t& size ) :
+    packet( ) {
     setMemory( ptr, size );
 }
 
 packet::packet( const packet& other ) :
-    memPtr( nullptr ),
-    memSize( 0 ) {
-
+    packet( ) {
+    setMemory( &other, other.size( ) );
 }
 
 packet::~packet( ) {
-
+    if (memPtr != nullptr)
+        delete[] memPtr;
 }
 
 packet & packet::operator=( const packet & other ) {
@@ -34,9 +38,14 @@ const size_t packet::size( ) const {
 void packet::setMemory( const char * ptr, const size_t & size ) {
     char*   oldPtr = memPtr;
 
+    // Allocate new memory and copy
     memPtr = new char[size];
     memcpy( memPtr, ptr, size );
 
+    // New size
+    memSize = size;
+
+    // Delete old memory, if allocated
     if (oldPtr != nullptr)
         delete[] oldPtr;
 }

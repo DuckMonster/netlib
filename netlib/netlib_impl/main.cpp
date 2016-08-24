@@ -1,10 +1,36 @@
 #include <server.hpp>
 #include <iostream>
+#include <array>
+
 using namespace std;
 
+class cli {
+public:
+    cli( ) : id( -1 ) { }
+    cli( const size_t& id ) : id( id ) { }
+    size_t id;
+};
+
+net::server s;
+array<cli, 256> clients;
+
+void sendThread( ) {
+    while (true) {
+        char* ping = "Ping!\n";
+        net::packet pkt( ping, 5 );
+
+        for (cli c : clients)
+            if (c.id != -1)
+                s.send( c.id, pkt );
+
+        this_thread::sleep_for( chrono::seconds( 1 ) );
+    }
+}
+
 int main( ) {
-    net::server s;
     s.startup( 1520 );
+
+    std::thread thr( &sendThread );
 
     while (s.active( )) {
         net::event e;
@@ -12,10 +38,29 @@ int main( ) {
             switch (e.type) {
                 case net::eConnect:
                     cout << "Client " << e.dConnect.id << " connected!\n";
+
+                    clients[e.dConnect.id] = cli( e.dConnect.id );
+
                     break;
 
                 case net::eDisconnect:
                     cout << "Client " << e.dDisconnect.id << " disconnected!\n";
+
+                    clients[e.dDisconnect.id] = cli( );
+
+                    break;
+
+                case net::ePacket:
+                    net::packet& pkt = e.dPacket.pkt;
+
+                    cout << "Client " << e.dPacket.id << ": ";
+                    cout.write( &e.dPacket.pkt, e.dPacket.pkt.size( ) );
+                    cout << "\n";
+
+                    for (cli c : clients)
+                        if (c.id != -1)
+                            s.send( c.id, pkt );
+
                     break;
             }
         }

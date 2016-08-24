@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "packet.hpp"
 
 namespace net {
     enum EventType {
@@ -26,7 +27,11 @@ namespace net {
         };
 
         struct packetData {
-            packetData( ) { }
+            packetData( ) : pkt( ), id( -1 ) { }
+            packetData( const packet& pkt, const size_t& id ) : pkt( pkt ), id( id ) { }
+
+            net::packet pkt;
+            size_t id;
         };
 
         struct errorData {
