@@ -24,6 +24,7 @@ namespace net {
 
         server&                 send( const size_t& id, const packet& pkt );
 
+        void                    update( );
         bool                    pollEvent( net::event& e );
 
     private:

@@ -5,9 +5,8 @@
 using namespace net;
 using namespace std;
 
-socketworker::socketworker( SOCKET socket, queue<event>& eventQueue, const size_t& id ) :
+socketworker::socketworker( SOCKET socket, const size_t& id ) :
     socket( socket ),
-    eventQueue( eventQueue ),
     connectionID( id ),
     sendThread( ),
     recvThread( ) {
@@ -22,14 +21,13 @@ net::socketworker::~socketworker( ) {
 
     sendThread.join( );
     recvThread.join( );
+
+    cout << "Socket " << connectionID << " destroyed.\n";
 }
 
 void net::socketworker::disconnect( ) {
     if (!connected( ))
         return;
-
-    // Add event
-    eventQueue.push( event( event::disconnectData( connectionID ) ) );
 
     // Shutdown peacefully
     shutdown( socket, SD_BOTH );
@@ -40,11 +38,36 @@ void net::socketworker::disconnect( ) {
 }
 
 void socketworker::send( const packet & pkt ) {
-    // Lock
-    lock_guard<mutex> lock( sendMtx );
+    // Not connected
+    if (!connected( ))
+        return;
+
+    // Lock (try)
+    unique_lock<mutex> lock( sendMtx, try_to_lock );
 
     // Push onto front queue
-    frontSendQueue( ).push( pkt );
+    if (lock.owns_lock( ))
+        sendQueue.front( ).push( pkt );
+}
+
+bool net::socketworker::recv( packet & pkt ) {
+    // Not connected
+    if (!connected( ))
+        return false;
+
+    // Lock
+    lock_guard<mutex> lock( recvMtx );
+
+    // If there is packets in the queue, copy, remove it and return true
+    if (!recvQueue.empty( )) {
+        pkt = recvQueue.front( );
+        recvQueue.pop( );
+
+        return true;
+    }
+
+    // No messages
+    return false;
 }
 
 bool socketworker::connected( ) {
@@ -58,12 +81,11 @@ void socketworker::sendLoop( ) {
         sendMtx.lock( ); // LOCK
 
         // If the front queue is not empty, it will swap the front and back queue
-        // After that it will loop through the back queue to send all packets, while the new front queue will be filled
-        if (!frontSendQueue( ).empty( )) {
-            sendQueueIndex++;
+        if (!sendQueue.front( ).empty( )) {
+            queue<packet> q = sendQueue.swap( );
             sendMtx.unlock( ); // UNLOCK
 
-            sendAll( backSendQueue( ) );
+            sendAll( q );
         }
         else
             sendMtx.unlock( ); // UNLOCK
@@ -86,30 +108,18 @@ void socketworker::sendAll( queue<packet>& queue ) {
 void socketworker::recvLoop( ) {
     while (connected( )) {
         char buffer[512];
-        std::cout << "starting recv: " << socket << "\n";
-
         size_t received = ::recv( socket, buffer, 512, 0 );
 
-        std::cout << "recv\n";
-
         if (received == 0 || received == SOCKET_ERROR) {
-            if (received == SOCKET_ERROR)
-                eventQueue.push( event( event::errorData( "recv", WSAGetLastError( ) ) ) );
-
             disconnect( );
             return;
         }
+
+        // Add packet to queue
+        packet pkt( buffer, received );
         {
-            packet pkt( buffer, received );
-            eventQueue.push( event( event::packetData( pkt, connectionID ) ) );
+            lock_guard<mutex> lock( recvMtx );
+            recvQueue.push( pkt );
         }
     }
-}
-
-queue<packet>& socketworker::frontSendQueue( ) {
-    return sendQueues[sendQueueIndex % 2];
-}
-
-queue<packet>& socketworker::backSendQueue( ) {
-    return sendQueues[(sendQueueIndex + 1) % 2];
 }

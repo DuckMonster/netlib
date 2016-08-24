@@ -96,6 +96,30 @@ net::server & net::server::send( const size_t & id, const packet & pkt ) {
     clientArray[id]->send( pkt );
 }
 
+void net::server::update( ) {
+    lock_guard<mutex> lock( acceptMutex );
+
+    // Poll all clients
+    for (int i=0; i < clientArray.size( ); i++) {
+        if (clientArray.contains( i )) {
+
+            worker_ptr ptr = clientArray[i];
+
+            // Disconnect
+            if (!ptr->connected( )) {
+                eventQueue.push( event( event::disconnectData( i ) ) );
+                clientArray.remove( i );
+                continue;
+            }
+
+            // Messages
+            packet pkt;
+            while (ptr->recv( pkt ))
+                eventQueue.push( event( event::packetData( pkt, i ) ) );
+        }
+    }
+}
+
 bool net::server::pollEvent( net::event& e ) {
     lock_guard<mutex> lock( acceptMutex );
 
@@ -104,11 +128,7 @@ bool net::server::pollEvent( net::event& e ) {
 
     e = eventQueue.front( );
     eventQueue.pop( );
-
-    // Handle disconnect events
-    if (e.type == eDisconnect)
-        clientArray.remove( e.dDisconnect.id );
-
+        
     return true;
 }
 
@@ -125,18 +145,9 @@ void net::server::acceptLoop( ) {
         {
             lock_guard<mutex> lock( acceptMutex );
 
-            SOCKADDR_IN cAddr;
-            int cAddrLen = sizeof( cAddr );
-
-            getpeername( newClient, (sockaddr*)&cAddr, &cAddrLen );
-
-            char addrbuf[512];
-            InetNtop( cAddr.sin_family, &cAddr.sin_addr, addrbuf, 512 );
-
-            cout << "Connection from " << addrbuf << ":" << cAddr.sin_port << "\n";
-
+            // Add new client to array
             size_t newID = clientArray.insert( worker_ptr( ) );
-            clientArray[newID] = worker_ptr( new socketworker( newClient, eventQueue, newID ) );
+            clientArray[newID] = worker_ptr( new socketworker( newClient, newID ) );
 
             // Add a connect event to queue
             eventQueue.push( net::event( net::event::connectData( newID ) ) );

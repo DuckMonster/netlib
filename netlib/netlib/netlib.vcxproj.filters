@@ -41,5 +41,8 @@
     <ClInclude Include="packet.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="bufferedqueue.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

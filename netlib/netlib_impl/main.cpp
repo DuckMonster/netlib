@@ -33,6 +33,7 @@ int main( ) {
     std::thread thr( &sendThread );
 
     while (s.active( )) {
+        s.update( );
         net::event e;
         while (s.pollEvent( e )) {
             switch (e.type) {
@@ -53,9 +54,9 @@ int main( ) {
                 case net::ePacket:
                     net::packet& pkt = e.dPacket.pkt;
 
-                    cout << "Client " << e.dPacket.id << ": ";
-                    cout.write( &e.dPacket.pkt, e.dPacket.pkt.size( ) );
-                    cout << "\n";
+//                     cout << "Client " << e.dPacket.id << ": ";
+//                     cout.write( &e.dPacket.pkt, e.dPacket.pkt.size( ) );
+//                     cout << "\n";
 
                     for (cli c : clients)
                         if (c.id != -1)

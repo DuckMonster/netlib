@@ -123,6 +123,7 @@
     <ClCompile Include="sockethandler.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bufferedqueue.hpp" />
     <ClInclude Include="event.hpp" />
     <ClInclude Include="packet.hpp" />
     <ClInclude Include="server.hpp" />

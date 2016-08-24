@@ -4,18 +4,22 @@
 #include <queue>
 #include <mutex>
 
+#include "bufferedqueue.hpp"
 #include "packet.hpp"
 #include "event.hpp"
 
 namespace net {
+    typedef void(event_func)( const event& e );
+
     class socketworker {
     public:
-        socketworker( SOCKET socket, std::queue<net::event>& eventQueue, const size_t& id );
+        socketworker( SOCKET socket, const size_t& id );
         ~socketworker( );
 
         void                    disconnect( );
 
         void                    send( const packet& pkt );
+        bool                    recv( packet& pkt );
         bool                    connected( );
 
     private:
@@ -23,20 +27,16 @@ namespace net {
         void                    sendAll( std::queue<packet>& queue );
         void                    recvLoop( );
 
-        std::queue<packet>&     frontSendQueue( );
-        std::queue<packet>&     backSendQueue( );
-
         SOCKET                  socket;
         const size_t            connectionID;
-
-        std::queue<net::event>& eventQueue;
 
         std::thread             sendThread;
         std::thread             recvThread;
 
-        std::queue<packet>      sendQueues[2];
-        size_t                  sendQueueIndex = 0;
+        bufferedqueue<packet>   sendQueue;
+        std::queue<packet>      recvQueue;
 
         std::mutex              sendMtx;
+        std::mutex              recvMtx;
     };
 }
