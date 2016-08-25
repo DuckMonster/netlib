@@ -21,8 +21,6 @@ net::socketworker::~socketworker( ) {
 
     sendThread.join( );
     recvThread.join( );
-
-    cout << "Socket " << connectionID << " destroyed.\n";
 }
 
 void net::socketworker::disconnect( ) {

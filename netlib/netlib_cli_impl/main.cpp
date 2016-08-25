@@ -8,27 +8,21 @@ client c;
 
 int main( ) {
     client c;
+
     c.connect( "localhost", 1520 );
 
     while (c.connected( )) {
+
+        char msg[512];
+        packet pkt( msg, 512 );
+
+        c.send( pkt );
+
+        net::event e;
+
         c.update( );
+        while (c.pollEvent( e ));
 
-        event e;
-        while (c.pollEvent( e )) {
-            switch (e.type) {
-                case net::ePacket:
-                    net::packet& pkt = e.dPacket.pkt;
-
-                    cout.write( &e.dPacket.pkt, e.dPacket.pkt.size( ) ) << "\n";
-
-                    char* ping = "Ping from client!";
-                    net::packet responsePkt( ping, strlen( ping ) );
-                    c.send( responsePkt );
-
-                    break;
-            }
-        }
-
-        this_thread::sleep_for( chrono::milliseconds( 2 ) );
+        this_thread::sleep_for( chrono::milliseconds( 10 ) );
     }
 }

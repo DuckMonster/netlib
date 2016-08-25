@@ -3,6 +3,7 @@
 #include <array>
 
 using namespace std;
+using namespace std::chrono;
 
 class cli {
 public:
@@ -27,10 +28,17 @@ void sendThread( ) {
     }
 }
 
+long long millisecs = 0;
+long msgs = 0;
+long in = 0;
+long out = 0;
+
 int main( ) {
     s.startup( 1520 );
 
-    std::thread thr( &sendThread );
+    //std::thread thr( &sendThread );
+
+    high_resolution_clock::time_point t1;
 
     while (s.active( )) {
         s.update( );
@@ -38,14 +46,14 @@ int main( ) {
         while (s.pollEvent( e )) {
             switch (e.type) {
                 case net::eConnect:
-                    cout << "Client " << e.dConnect.id << " connected!\n";
+                    //cout << "Client " << e.dConnect.id << " connected!\n";
 
                     clients[e.dConnect.id] = cli( e.dConnect.id );
 
                     break;
 
                 case net::eDisconnect:
-                    cout << "Client " << e.dDisconnect.id << " disconnected!\n";
+                    //cout << "Client " << e.dDisconnect.id << " disconnected!\n";
 
                     clients[e.dDisconnect.id] = cli( );
 
@@ -54,14 +62,41 @@ int main( ) {
                 case net::ePacket:
                     net::packet& pkt = e.dPacket.pkt;
 
-                    cout << "Client " << e.dPacket.id << ": ";
+                    /*cout << "Client " << e.dPacket.id << ": ";
                     cout.write( &e.dPacket.pkt, e.dPacket.pkt.size( ) );
-                    cout << "\n";
+                    cout << "\n";*/
+
+                    msgs++;
+                    in += pkt.size( );
+
+                    for (cli c : clients)
+                        if (c.id != -1) {
+                            s.send( c.id, e.dPacket.pkt );
+                            out += pkt.size( );
+                        }
 
                     break;
             }
         }
 
-        this_thread::sleep_for( chrono::milliseconds( 2 ) );
+        high_resolution_clock::time_point t2 = high_resolution_clock::now( );
+        auto duration = duration_cast<microseconds>(t2 - t1).count( );
+
+        t1 = high_resolution_clock::now( );
+
+        millisecs += duration;
+        if (millisecs >= 1000000) {
+            cout << "Handled " << msgs << " messages ( ";
+            cout << "in: " << in << " B, out: " << out << " B ) in ";
+            cout << (duration / 1000.0) << " ms\n";
+            millisecs = 0;
+
+            msgs = 0;
+            in = 0;
+            out = 0;
+        }
+
+
+        this_thread::sleep_for( chrono::microseconds( 1 ) );
     }
 }
