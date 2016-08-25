@@ -3,7 +3,7 @@ Multithreaded asynchronous server and client network library.
 
 #Examples
 ##Server
-```
+```c++
 // Create server object and listen to port 1520
 net::server serv;
 serv.startup( 1520 );
@@ -60,7 +60,7 @@ Client 0 sent: Hello from client!
 Client 0 disconnected!
 ```
 ##Client
-```
+```c++
 // Create a client object and connect to localhost:1520
 net::client cli;
 cli.connect( "localhost", 1520 );
