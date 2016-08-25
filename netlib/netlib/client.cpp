@@ -13,6 +13,7 @@ net::client::client( ) {
 }
 
 net::client::~client( ) {
+    disconnect( );
 }
 
 void net::client::connect( const char * ip, const short & port ) {
@@ -35,7 +36,7 @@ void net::client::connect( const char * ip, const short & port ) {
     hints.ai_socktype   = SOCK_STREAM;
     hints.ai_flags      = AI_PASSIVE;
 
-    iResult = getaddrinfo( NULL, to_string( port ).c_str( ), &hints, &result );
+    iResult = getaddrinfo( ip, to_string( port ).c_str( ), &hints, &result );
     if (iResult != 0) {
         connectErr( "getaddrinfo", iResult );
         return;
@@ -78,11 +79,14 @@ void net::client::connect( const char * ip, const short & port ) {
 }
 
 void net::client::disconnect( ) {
-    socketWorker = nullptr;
+    if (socketWorker) {
+        socketWorker->disconnect( );
+        socketWorker = nullptr;
+    }
 }
 
 bool net::client::connected( ) {
-    return socketWorker->connected( );
+    return socketWorker && socketWorker->connected( );
 }
 
 client & net::client::send( const packet & pkt ) {

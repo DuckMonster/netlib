@@ -16,8 +16,8 @@ array<cli, 256> clients;
 
 void sendThread( ) {
     while (true) {
-        char* ping = "Ping!\n";
-        net::packet pkt( ping, 5 );
+        char* ping = "Ping from server!";
+        net::packet pkt( ping, strlen( ping ) );
 
         for (cli c : clients)
             if (c.id != -1)
@@ -54,16 +54,14 @@ int main( ) {
                 case net::ePacket:
                     net::packet& pkt = e.dPacket.pkt;
 
-//                     cout << "Client " << e.dPacket.id << ": ";
-//                     cout.write( &e.dPacket.pkt, e.dPacket.pkt.size( ) );
-//                     cout << "\n";
-
-                    for (cli c : clients)
-                        if (c.id != -1)
-                            s.send( c.id, pkt );
+                    cout << "Client " << e.dPacket.id << ": ";
+                    cout.write( &e.dPacket.pkt, e.dPacket.pkt.size( ) );
+                    cout << "\n";
 
                     break;
             }
         }
+
+        this_thread::sleep_for( chrono::milliseconds( 2 ) );
     }
 }

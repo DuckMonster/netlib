@@ -82,7 +82,7 @@ void socketworker::sendLoop( ) {
 
         // If the front queue is not empty, it will swap the front and back queue
         if (!sendQueue.front( ).empty( )) {
-            queue<packet> q = sendQueue.swap( );
+            queue<packet>& q = sendQueue.swap( );
             sendMtx.unlock( ); // UNLOCK
 
             sendAll( q );
@@ -107,9 +107,12 @@ void socketworker::sendAll( queue<packet>& queue ) {
 
 void socketworker::recvLoop( ) {
     while (connected( )) {
+
+        // Receive data
         char buffer[512];
         size_t received = ::recv( socket, buffer, 512, 0 );
 
+        // Error checking
         if (received == 0 || received == SOCKET_ERROR) {
             disconnect( );
             return;

@@ -94,6 +94,7 @@ net::server & net::server::send( const size_t & id, const packet & pkt ) {
         return *this;
 
     clientArray[id]->send( pkt );
+    return *this;
 }
 
 void net::server::update( ) {

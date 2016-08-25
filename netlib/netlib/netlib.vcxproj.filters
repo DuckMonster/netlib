@@ -18,9 +18,6 @@
     <ClCompile Include="server.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="event.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="sockethandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
