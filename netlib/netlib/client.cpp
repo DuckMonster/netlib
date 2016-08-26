@@ -96,11 +96,16 @@ client & net::client::send( const packet & pkt ) {
 }
 
 void net::client::update( ) {
-    // Disconnect
-    if (!socketWorker->connected( )) {
-        eventQueue.push( event( event::disconnectData( 0 ) ) );
+    if (!connected( ))
         return;
-    }
+
+    // Disconnect (disabled for now)
+    /*
+    if (socketWorker && !socketWorker->connected( )) {
+        eventQueue.push( event( event::disconnectData( 0 ) ) );
+        socketWorker = nullptr;
+        return;
+    }*/
 
     // Messages
     packet pkt;

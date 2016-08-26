@@ -5,6 +5,19 @@
 using namespace net;
 using namespace std;
 
+// Short to char array
+void stoc( const unsigned short& value, char arr[2] ) {
+    memcpy( arr, &value, 2 );
+}
+
+// Char array to short
+unsigned short ctos( const char arr[2] ) {
+    unsigned short value;
+    memcpy( &value, arr, 2 );
+
+    return value;
+}
+
 socketworker::socketworker( SOCKET socket, const size_t& id ) :
     socket( socket ),
     connectionID( id ),
@@ -97,6 +110,14 @@ void socketworker::sendAll( queue<packet>& queue ) {
     // Send all packets in queue
     while (!queue.empty( )) {
         packet& pkt = queue.front( );
+
+        // Each message has a 2 byte unsigned short with the length of the packet
+        char pktSizeBuf[2];
+        stoc( pkt.size( ), pktSizeBuf );    // unsigned short to char[2]
+        
+        // Send header
+        ::send( socket, pktSizeBuf, 2, 0 );
+        // Send actual package
         ::send( socket, &pkt, pkt.size( ), 0 );
 
         queue.pop( );
@@ -106,18 +127,32 @@ void socketworker::sendAll( queue<packet>& queue ) {
 void socketworker::recvLoop( ) {
     while (connected( )) {
 
-        // Receive data
-        char buffer[512];
-        size_t received = ::recv( socket, buffer, 512, 0 );
+        // Wait for packet size header (2 bytes, unsigned short)
+        char header[2];
+        size_t received = ::recv( socket, header, 2, 0 );
+
+        if (received != 2) {
+            disconnect( );
+            return;
+        }
+        
+        unsigned short dataSize = ctos( header );
+
+        // Allocate buffer for actual packet
+        char* buffer = new char[dataSize];
+        received = ::recv( socket, buffer, dataSize, MSG_WAITALL ); // MSG_WAITALL tells the socket to completely fill the buffer
 
         // Error checking
         if (received == 0 || received == SOCKET_ERROR) {
+            delete[] buffer; // Deallocate buffer
             disconnect( );
             return;
         }
 
         // Add packet to queue
         packet pkt( buffer, received );
+        delete[] buffer;    // Deallocate buffer
+
         {
             lock_guard<mutex> lock( recvMtx );
             recvQueue.push( pkt );

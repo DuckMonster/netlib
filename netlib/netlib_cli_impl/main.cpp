@@ -1,28 +1,17 @@
-#include <client.hpp>
 #include <iostream>
-
-using namespace std;
-using namespace net;
-
-client c;
+#include <client.hpp>
 
 int main( ) {
-    client c;
+    // Create a client object and connect to localhost:1520
+    net::client cli;
+    cli.connect( "localhost", 1520 );
 
-    c.connect( "localhost", 1520 );
+    while (cli.connected( )) {
+        char data[10];
 
-    while (c.connected( )) {
+        net::packet pkt( data, 10 );
+        cli.send( pkt );
 
-        char msg[512];
-        packet pkt( msg, 512 );
-
-        c.send( pkt );
-
-        net::event e;
-
-        c.update( );
-        while (c.pollEvent( e ));
-
-        this_thread::sleep_for( chrono::milliseconds( 10 ) );
+        //std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }
 }
