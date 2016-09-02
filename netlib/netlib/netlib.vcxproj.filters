@@ -15,27 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="server.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="sockethandler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="packet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client.cpp">
+    <ClCompile Include="socketworker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="server.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="event.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sockethandler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="packet.hpp">
@@ -44,7 +32,7 @@
     <ClInclude Include="bufferedqueue.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client.hpp">
+    <ClInclude Include="socketworker.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

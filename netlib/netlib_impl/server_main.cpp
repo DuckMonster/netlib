@@ -35,10 +35,8 @@ int main( ) {
 
                     // Packet
                 case net::ePacket:
-                    if (e.dPacket.pkt.size( ) != 10)
-                        std::cout << "BAD SIZE!\n";
-                    else
-                        std::cout << "GOOD SIZE!\n";
+                    std::cout << "Received ping\n";
+                    serv.send( e.dPacket.id, e.dPacket.pkt );
 
                     break;
             }
