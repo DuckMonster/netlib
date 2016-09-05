@@ -1,47 +1,39 @@
-#include <server.hpp>
+#include <socketworker.hpp>
 #include <iostream>
-#include <array>
 
-int main( ) {
-    // Create server object and listen to port 1520
-    net::server serv;
-    serv.startup( 1520 );
+using namespace std;
+using asio::ip::tcp;
 
-    while (serv.active( )) {
+void handleSocket( net::socket_ptr sock ) {
+    net::socketworker worker( sock, 0 );
 
-        // Will update client incoming messages, as well as disconnects
-        serv.update( );
+    cout << worker.endpoint().address().to_string() << ":" << worker.endpoint( ).port( ) << " connected!\n";
 
-        // Poll for events
-        net::event e;
-        while (serv.pollEvent( e )) {
-            size_t clientID;
+    while (worker.connected( )) {
+        net::packet pkt;
 
-            switch (e.type) {
-
-                // Accepted connection
-                case net::eConnect:
-                    clientID = e.dConnect.id;
-                    std::cout << "Client " << clientID << " connected!\n";
-
-                    break;
-
-                    // Disconnection
-                case net::eDisconnect:
-                    clientID = e.dDisconnect.id;
-                    std::cout << "Client " << clientID << " disconnected!\n";
-
-                    break;
-
-                    // Packet
-                case net::ePacket:
-                    std::cout << "Received ping\n";
-                    serv.send( e.dPacket.id, e.dPacket.pkt );
-
-                    break;
-            }
+        if (worker.recv( pkt )) {
+            cout << "Received " << pkt.size( ) << " bytes!\n";
+            worker.send( pkt );
         }
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    }
+
+    cout << worker.endpoint( ).address( ).to_string( ) << ":" << worker.endpoint( ).port( ) << " disconnected!\n";
+}
+
+int main( ) {
+    asio::io_service service;
+
+    tcp::acceptor acceptor( service, tcp::endpoint( tcp::v4( ), 1520 ) );
+
+    while (true) {
+        tcp::endpoint ep;
+        net::socket_ptr sock( new tcp::socket( service ) );
+        acceptor.accept( *sock, ep );
+
+        std::thread thr( handleSocket, sock );
+        thr.detach( );
     }
 }
