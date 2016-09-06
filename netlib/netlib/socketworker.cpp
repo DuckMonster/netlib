@@ -1,15 +1,17 @@
 #include "socketworker.hpp"
 #include <iostream>
 
-net::socketworker::socketworker( const socket_ptr& socket, const size_t socketID ) :
+net::socketworker::socketworker( const socket_ptr& socket, const size_t socketID, eventmanager& eventMngr ) :
     _socket( socket ),
     _endpoint( socket->remote_endpoint( ) ),
     _id( socketID ),
 
+    _eventMngr( eventMngr ),
+
     _recvThread( ),
     _sendThread( ),
 
-    _outQueue( ) {
+    _sendQueue( ) {
 
     // Start up the threads
     _recvThread = std::thread( &socketworker::recvLoop, this );
@@ -22,8 +24,8 @@ net::socketworker::~socketworker( ) {
 
     // Aquire lock and then notify, to ensure proper thread shutdown
     {
-        std::lock_guard<std::mutex> outLock( _outMutex ), inLock( _inMutex );
-        _outCV.notify_all( );
+        std::lock_guard<std::mutex> outLock( _sendMutex ), inLock( _recvMutex );
+        _sendCV.notify_all( );
     }
 
     _recvThread.join( );
@@ -45,6 +47,9 @@ void net::socketworker::disconnect( ) {
     _socket->close( );
 
     _socket = nullptr;
+
+    // Add disconnect event to the event manager
+    _eventMngr.add( event( event::disconnectData( _id ) ) );
 }
 
 asio::ip::tcp::endpoint net::socketworker::endpoint( ) {
@@ -52,43 +57,35 @@ asio::ip::tcp::endpoint net::socketworker::endpoint( ) {
 }
 
 void net::socketworker::send( const packet& pkt ) {
-    std::lock_guard<std::mutex> lock( _outMutex );
+    // Lock!
+    std::lock_guard<std::mutex> lock( _sendMutex );
 
-    _outQueue.front( ).push( pkt );
-    _outCV.notify_all( );
-}
-
-bool net::socketworker::recv( packet& pkt ) {
-    std::unique_lock<std::mutex> lock( _inMutex, std::try_to_lock );
-
-    if (lock.owns_lock( )) {
-        if (_inQueue.empty( ))
-            return false;
-
-        pkt = _inQueue.front( );
-        _inQueue.pop( );
-
-        return true;
-    }
-    else
-        return false;
+    // Push the packet and notify condition variable so that the send thread can do its thing
+    _sendQueue.front( ).push( pkt );
+    _sendCV.notify_all( );
 }
 
 void net::socketworker::recvLoop( ) {
+
     while (connected( )) {
 
+        // For disconnect handling
         asio::error_code ec;
-        char cbuff[1024];
 
+        // Receive some data
+        char cbuff[1024];
         size_t pckSize = _socket->receive( asio::buffer( cbuff, 1024 ), 0, ec );
 
+        // If there was an error, disconnect and exit
         if (ec) {
             disconnect( );
             return;
         }
+
+        // ... else, lock mutex and add event to the event manager
         else {
-            std::lock_guard<std::mutex> lock( _inMutex );
-            _inQueue.push( packet( cbuff, pckSize ) );
+            std::lock_guard<std::mutex> lock( _recvMutex );
+            _eventMngr.add( event( event::packetData( packet( cbuff, pckSize ), _id ) ) );
         }
     }
 }
@@ -96,23 +93,31 @@ void net::socketworker::recvLoop( ) {
 void net::socketworker::sendLoop( ) {
     while (connected( )) {
         {
+            // Wait for condition variable to be notified
+            // _outCV is notified when a packet is added to the out-queue, or when the socketworker is disconnected
             {
-                std::unique_lock<std::mutex> lock( _outMutex );
-                _outCV.wait( lock );
+                std::unique_lock<std::mutex> lock( _sendMutex );
+                _sendCV.wait( lock );
             }
 
-            _outMutex.lock( );
+            // Manual lock
+            // TODO: Change to use guard_lock somehow
+            _sendMutex.lock( );
 
-            if (!_outQueue.front( ).empty( )) {
+            if (!_sendQueue.front( ).empty( )) {
 
-                std::queue<packet>& out = _outQueue.swap( );
-                _outMutex.unlock( );
+                // Swap the queue. The mutex is then safe to unlock
+                std::queue<packet>& out = _sendQueue.swap( ); //TODO: This method is not exception safe right here
+                _sendMutex.unlock( );
 
+                // Go through the queue
                 while (!out.empty( )) {
 
-                    packet& pkt = out.front( );
-
+                    // For disconnect checking
                     asio::error_code ec;
+
+                    // Send it!
+                    packet& pkt = out.front( );
                     _socket->send( asio::buffer( &pkt, pkt.size( ) ), 0, ec );
 
                     // Error handling
@@ -121,11 +126,14 @@ void net::socketworker::sendLoop( ) {
                         return;
                     }
 
+                    // Pop!
                     out.pop( );
                 }
             }
+
+            // Unlock the mutex if there are no items in the queue
             else
-                _outMutex.unlock( );
+                _sendMutex.unlock( );
         }
     }
 }

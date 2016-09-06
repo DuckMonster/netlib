@@ -133,13 +133,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="client.cpp" />
+    <ClCompile Include="eventmanager.cpp" />
     <ClCompile Include="packet.cpp" />
+    <ClCompile Include="server.cpp" />
     <ClCompile Include="socketworker.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bufferedqueue.hpp" />
+    <ClInclude Include="client.hpp" />
     <ClInclude Include="event.hpp" />
+    <ClInclude Include="eventmanager.hpp" />
     <ClInclude Include="packet.hpp" />
+    <ClInclude Include="sdef.h" />
+    <ClInclude Include="server.hpp" />
     <ClInclude Include="socketworker.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

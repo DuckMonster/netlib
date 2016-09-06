@@ -41,32 +41,39 @@ namespace net {
             int code;
         };
 
-        event( ) : type( eNone ) { }
+        event( ) : _type( eNone ) { }
         event( connectData dConnect ) :
-            type( eConnect ),
-            dConnect( dConnect ) {
+            _type( eConnect ),
+            _dConnect( dConnect ) {
         }
 
         event( disconnectData dDisconnect ) :
-            type( eDisconnect ),
-            dDisconnect( dDisconnect ) {
+            _type( eDisconnect ),
+            _dDisconnect( dDisconnect ) {
         }
 
         event( packetData dPacket ) :
-            type( ePacket ),
-            dPacket( dPacket ) {
+            _type( ePacket ),
+            _dPacket( dPacket ) {
         }
 
         event( errorData dError ) :
-            type( eError ),
-            dError( dError ) {
+            _type( eError ),
+            _dError( dError ) {
         }
 
-        EventType       type;
+        const EventType&        type( ) { return _type; }
+        const connectData&      connect( ) { return _dConnect; }
+        const disconnectData&   disconnect( ) { return _dDisconnect; }
+        const packetData&       packet( ) { return _dPacket; }
+        const errorData&        error( ) { return _dError; }
 
-        connectData     dConnect;
-        disconnectData  dDisconnect;
-        packetData      dPacket;
-        errorData       dError;
+    private:
+        EventType               _type;
+
+        connectData             _dConnect;
+        disconnectData          _dDisconnect;
+        packetData              _dPacket;
+        errorData               _dError;
     };
 }
