@@ -10,9 +10,6 @@ serv.startup( 1520 );
 
 while (serv.active( )) {
 
-    // Will update client incoming messages, as well as disconnects
-    serv.update( );
-
     // Poll for events
     net::event e;
     while (serv.pollEvent( e )) {
@@ -75,9 +72,6 @@ if (cli.connected( )) {
 
 // Main loop
 while (cli.connected( )) {
-
-    // Update for incoming messages and disconnects
-    cli.update( );
 
     // Start polling for events
     net::event e;
