@@ -3,8 +3,8 @@
 net::server server;
 
 void shutdownThread( ) {
-    std::this_thread::sleep_for( std::chrono::seconds( 3 ) );
-    //server.shutdown( );
+    std::this_thread::sleep_for( std::chrono::seconds( 15 ) );
+    server.shutdown( );
 }
 
 int main( ) {
@@ -45,6 +45,4 @@ int main( ) {
     }
 
     thr.join( );
-
-    std::cin.get( );
 }

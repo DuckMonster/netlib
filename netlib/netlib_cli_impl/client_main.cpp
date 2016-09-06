@@ -47,6 +47,4 @@ int main( int argc, char** argv ) {
     }
 
     thr.join( );
-
-    std::cin.get( );
 }

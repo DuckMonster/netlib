@@ -39,6 +39,9 @@ bool net::socketworker::connected( ) const {
 
 
 void net::socketworker::disconnect( ) {
+    // Lock send and receive
+    std::lock_guard<std::mutex> outLock( _sendMutex ), inLock( _recvMutex );
+
     if (!connected( ))
         return;
 
