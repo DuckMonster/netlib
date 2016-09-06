@@ -13,26 +13,26 @@ while (serv.active( )) {
     // Poll for events
     net::event e;
     while (serv.pollEvent( e )) {
-        switch (e.type) {
+        switch (e.type( )) {
 
             // Accepted connection
-            case net::eConnect:
-                size_t conID = e.dConnect.id;
+            case net::eConnect: {
+                size_t conID = e.connect( ).id;
                 std::cout << "Client " << conID << " connected!\n";
 
-                break;
+            } break;
 
-                // Disconnection
-            case net::eDisconnect:
-                size_t disID = e.dDisconnect.id;
+            // Disconnection
+            case net::eDisconnect: {
+                size_t disID = e.disconnect( ).id;
                 std::cout << "Client " << disID << " disconnected!\n";
 
-                break;
+            } break;
 
-                // Packet
-            case net::ePacket:
-                size_t srcID = e.dPacket.id;
-                net::packet& pkt = e.dPacket.pkt;
+            // Packet
+            case net::ePacket: {
+                size_t srcID = e.packet( ).id;
+                const net::packet& pkt = e.packet( ).pkt;
 
                 std::cout << "Client " << srcID << " sent: ";
 
@@ -42,9 +42,9 @@ while (serv.active( )) {
                 std::cout << "\n";
 
                 // Echo packet back to client
-                serv.send( srcID, pkt );
-
-                break;
+                serv.send( pkt, srcID );
+                    
+            } break;
         }
     }
 }
@@ -55,12 +55,23 @@ Output (when running client example)
 Client 0 connected!
 Client 0 sent: Hello from client!
 Client 0 disconnected!
+Client 1 connected!
+Client 1 sent: Hello from client!
+Client 1 disconnected!
+
+.
+.
+.
+
+Client N connected!
+Client N sent: Hello from client!
+Client N disconnected!
 ```
 ##Client
 ```c++
 // Create a client object and connect to localhost:1520
 net::client cli;
-cli.connect( "localhost", 1520 );
+cli.connect( { "localhost", "1520" } );
 
 // Send a message if connection was successful
 if (cli.connected( )) {
@@ -76,18 +87,18 @@ while (cli.connected( )) {
     // Start polling for events
     net::event e;
     while (cli.pollEvent( e )) {
-        switch (e.type) {
+        switch (e.type( )) {
 
             // Packet
-            case net::ePacket:
-                net::packet& pkt = e.dPacket.pkt;
+            case net::ePacket: {
+                const net::packet& pkt = e.packet( ).pkt;
 
                 std::cout << "Received: ";
                 std::cout.write( &pkt, pkt.size( ) );
                 std::cout << "\n";
 
                 cli.disconnect( );
-                break;
+            } break;
         }
     }
 }
