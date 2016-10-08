@@ -88,12 +88,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\netlib;G:\Programmering\C++\!LIBS\asio\asio-1.10.6\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\netlib;C:\Programmering\C++\!LIBS\asio-1.10.6\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>G:\Programmering\C++\netlib\netlib\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Programmering\C++\netlib\netlib\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>net-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
