@@ -10,6 +10,7 @@ namespace net {
         ~packet( );
 
         const size_t    size( ) const;
+		const char*		begin( ) const;
 
         packet&         operator=( const packet& other );
         const char*     operator&( ) const;

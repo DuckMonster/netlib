@@ -2,15 +2,8 @@
 #include <iostream>
 net::server server;
 
-void shutdownThread( ) {
-    std::this_thread::sleep_for( std::chrono::seconds( 15 ) );
-    server.shutdown( );
-}
-
 int main( ) {
-    server.startup( 1520 );
-
-    std::thread thr( shutdownThread );
+    server.startup( 15620 );
 
     while (server.active( )) {
         net::event e;
@@ -43,6 +36,4 @@ int main( ) {
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }
-
-    thr.join( );
 }

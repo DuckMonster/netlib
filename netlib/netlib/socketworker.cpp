@@ -1,6 +1,8 @@
 #include "socketworker.hpp"
 #include <iostream>
 
+#include "lock_break.hpp"
+
 //// SIZE HEADER UTILS
 // Convert char* to short
 short ctos( char* const val ) {
@@ -11,6 +13,12 @@ short ctos( char* const val ) {
 char* stoc( short& val ) {
 	return reinterpret_cast<char*>(&val);
 }
+
+using namespace std;
+typedef std::chrono::high_resolution_clock::time_point time_point;
+using std::chrono::high_resolution_clock;
+
+time_point prev;
 
 net::socketworker::socketworker( const socket_ptr& socket, const size_t socketID, eventmanager& eventMngr ) :
 	_socket( socket ),
@@ -23,6 +31,10 @@ net::socketworker::socketworker( const socket_ptr& socket, const size_t socketID
 	_sendThread( ),
 
 	_sendQueue( ) {
+
+	// Set no-delay option
+	asio::ip::tcp::no_delay delay( true );
+	_socket->set_option( delay );
 
 	// Start up the threads
 	_recvThread = std::thread( &socketworker::recvLoop, this );
@@ -47,7 +59,6 @@ bool net::socketworker::connected( ) const {
 	// Check if the socket pointer is null
 	return (bool)_socket;
 }
-
 
 void net::socketworker::disconnect( ) {
 	// Lock send and receive
@@ -94,6 +105,9 @@ void net::socketworker::recvLoop( ) {
 		// Convert char* to short
 		short dataSize = ctos( szBuff );
 
+		if (dataSize == 0)
+			continue;
+
 		// Receive dataSize bytes
 		asio::read( *_socket, asio::buffer( cbuff, dataSize ), ec );
 
@@ -103,9 +117,10 @@ void net::socketworker::recvLoop( ) {
 			return;
 		}
 
+
 		// ... else, lock mutex and add event to the event manager
 		else {
-			std::lock_guard<std::mutex> lock( _recvMutex );
+			lock_guard<std::mutex> lock( _recvMutex );
 			_eventMngr.add( event( event::packetData( packet( cbuff, dataSize ), _id ) ) );
 		}
 	}
@@ -115,32 +130,28 @@ void net::socketworker::sendLoop( ) {
 	while (connected( )) {
 		{
 			// Manual lock
-			// TODO: Change to use guard_lock somehow
-			_sendMutex.lock( );
+			unique_lock<mutex> lock( _sendMutex );
 
-			if (!_sendQueue.front( ).empty( )) {
+			while (!_sendQueue.front( ).empty( )) {
 
 				// Swap the queue. The mutex is then safe to unlock
 				std::queue<packet>& out = _sendQueue.swap( ); //TODO: This method is not exception safe right here
-				_sendMutex.unlock( );
 
-				// Go through the queue
+				// Unlock the lock temporarily using lock_break
+				lock_break brk( lock );
+
 				while (!out.empty( )) {
-
-					// For disconnect checking
 					asio::error_code ec;
 
 					packet& pkt = out.front( );
-					short sPktSize = pkt.size( );
 
-					// Packet size
-					char* pktSize = stoc( sPktSize );
+					short sPktSize = pkt.size( );
+					char* cPktSize = stoc( sPktSize );
 
 					// Send packet size
-					_socket->send( asio::buffer( pktSize, 2 ), 0, ec );
-
+					_socket->write_some( asio::buffer( cPktSize, 2 ), ec );
 					// Send packet
-					_socket->send( asio::buffer( &pkt, pkt.size( ) ), 0, ec );
+					_socket->write_some( asio::buffer( pkt.begin( ), pkt.size( ) ), ec );
 
 					// Error handling
 					if (ec) {
@@ -148,16 +159,12 @@ void net::socketworker::sendLoop( ) {
 						return;
 					}
 
-					// Pop!
 					out.pop( );
 				}
 			}
 
-			// Unlock the mutex if there are no items in the queue
-			else {
-				_sendMutex.unlock( );
-				std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-			}
+			// Wait for send queue to be populated
+			_sendCV.wait( lock );
 		}
 	}
 }
