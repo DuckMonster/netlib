@@ -86,7 +86,7 @@ void net::socketworker::send( const packet& pkt ) {
 	std::lock_guard<std::mutex> lock( _sendMutex );
 
 	// Push the packet and notify condition variable so that the send thread can do its thing
-	_sendQueue.front( ).push( pkt );
+	_sendQueue.push( pkt );
 	_sendCV.notify_all( );
 }
 
@@ -132,35 +132,27 @@ void net::socketworker::sendLoop( ) {
 			// Manual lock
 			unique_lock<mutex> lock( _sendMutex );
 
-			while (!_sendQueue.front( ).empty( )) {
+			while (!_sendQueue.empty( )) {
 
-				// Swap the queue. The mutex is then safe to unlock
-				std::queue<packet>& out = _sendQueue.swap( ); //TODO: This method is not exception safe right here
+				asio::error_code ec;
 
-				// Unlock the lock temporarily using lock_break
-				lock_break brk( lock );
+				packet& pkt = _sendQueue.front( );
 
-				while (!out.empty( )) {
-					asio::error_code ec;
+				short sPktSize = pkt.size( );
+				char* cPktSize = stoc( sPktSize );
 
-					packet& pkt = out.front( );
+				// Send packet size
+				_socket->write_some( asio::buffer( cPktSize, 2 ), ec );
+				// Send packet
+				_socket->write_some( asio::buffer( pkt.begin( ), pkt.size( ) ), ec );
 
-					short sPktSize = pkt.size( );
-					char* cPktSize = stoc( sPktSize );
-
-					// Send packet size
-					_socket->write_some( asio::buffer( cPktSize, 2 ), ec );
-					// Send packet
-					_socket->write_some( asio::buffer( pkt.begin( ), pkt.size( ) ), ec );
-
-					// Error handling
-					if (ec) {
-						disconnect( );
-						return;
-					}
-
-					out.pop( );
+				// Error handling
+				if (ec) {
+					disconnect( );
+					return;
 				}
+
+				_sendQueue.pop( );
 			}
 
 			// Wait for send queue to be populated

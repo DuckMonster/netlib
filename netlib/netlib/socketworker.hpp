@@ -43,7 +43,8 @@ namespace net {
         std::thread             _recvThread;
         std::thread             _sendThread;
         
-        bufferedqueue<packet>   _sendQueue;
+        bufferedqueue<packet>   _sendQueueOld;
+		std::queue<packet>		_sendQueue;
 
         std::mutex              _recvMutex;
         std::mutex              _sendMutex;
@@ -51,5 +52,5 @@ namespace net {
         std::condition_variable _sendCV;
     };
 
-    typedef std::shared_ptr<socketworker> worker_ptr;
+    typedef std::unique_ptr<socketworker> worker_ptr;
 }
