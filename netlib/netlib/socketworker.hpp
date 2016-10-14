@@ -29,8 +29,8 @@ namespace net {
         void                    send( const packet& pkt );
 
     private:
-        void                    recvLoop( );
-        void                    sendLoop( );
+		void					doRecv( );
+		void					doSend( const packet& packet );
 
         //----------------
 
@@ -40,16 +40,7 @@ namespace net {
 
         eventmanager&           _eventMngr;
 
-        std::thread             _recvThread;
-        std::thread             _sendThread;
-        
-        bufferedqueue<packet>   _sendQueueOld;
-		std::queue<packet>		_sendQueue;
-
-        std::mutex              _recvMutex;
-        std::mutex              _sendMutex;
-
-        std::condition_variable _sendCV;
+		char					_recvBuffer[2048];
     };
 
     typedef std::unique_ptr<socketworker> worker_ptr;

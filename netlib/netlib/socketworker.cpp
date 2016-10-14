@@ -27,32 +27,19 @@ net::socketworker::socketworker( const socket_ptr& socket, const size_t socketID
 
 	_eventMngr( eventMngr ),
 
-	_recvThread( ),
-	_sendThread( ),
-
-	_sendQueue( ) {
+	_recvBuffer( ) {
 
 	// Set no-delay option
 	asio::ip::tcp::no_delay delay( true );
 	_socket->set_option( delay );
 
-	// Start up the threads
-	_recvThread = std::thread( &socketworker::recvLoop, this );
-	_sendThread = std::thread( &socketworker::sendLoop, this );
+	// Start up ASYNC yo
+	doRecv( );
 }
 
 net::socketworker::~socketworker( ) {
 	// Disconnect and join the threads
 	disconnect( );
-
-	// Aquire lock and then notify, to ensure proper thread shutdown
-	{
-		std::lock_guard<std::mutex> outLock( _sendMutex ), inLock( _recvMutex );
-		_sendCV.notify_all( );
-	}
-
-	_recvThread.join( );
-	_sendThread.join( );
 }
 
 bool net::socketworker::connected( ) const {
@@ -62,7 +49,6 @@ bool net::socketworker::connected( ) const {
 
 void net::socketworker::disconnect( ) {
 	// Lock send and receive
-	std::lock_guard<std::mutex> outLock( _sendMutex ), inLock( _recvMutex );
 
 	if (!connected( ))
 		return;
@@ -82,81 +68,30 @@ asio::ip::tcp::endpoint net::socketworker::endpoint( ) {
 }
 
 void net::socketworker::send( const packet& pkt ) {
-	// Lock!
-	std::lock_guard<std::mutex> lock( _sendMutex );
-
-	// Push the packet and notify condition variable so that the send thread can do its thing
-	_sendQueue.push( pkt );
-	_sendCV.notify_all( );
+	doSend( pkt );
 }
 
-void net::socketworker::recvLoop( ) {
-	char cbuff[2 << 16];
-	char szBuff[2];
+void net::socketworker::doRecv( ) {
+	_socket->async_read_some( asio::buffer( _recvBuffer, 2048 ),
 
-	while (connected( )) {
-
-		// For disconnect handling
-		asio::error_code ec;
-
-		// Receive data size
-		asio::read( *_socket, asio::buffer( szBuff, 2 ), ec );
-
-		// Convert char* to short
-		short dataSize = ctos( szBuff );
-
-		if (dataSize == 0)
-			continue;
-
-		// Receive dataSize bytes
-		asio::read( *_socket, asio::buffer( cbuff, dataSize ), ec );
-
-		// If there was an error, disconnect and exit
+		[this]( asio::error_code ec, size_t size ) {
 		if (ec) {
 			disconnect( );
 			return;
 		}
 
-
-		// ... else, lock mutex and add event to the event manager
-		else {
-			lock_guard<std::mutex> lock( _recvMutex );
-			_eventMngr.add( event( event::packetData( packet( cbuff, dataSize ), _id ) ) );
-		}
-	}
+		_eventMngr.add( event( event::packetData( packet( _recvBuffer, size ), _id ) ) );
+		doRecv( );
+	} );
 }
 
-void net::socketworker::sendLoop( ) {
-	while (connected( )) {
-		{
-			// Manual lock
-			unique_lock<mutex> lock( _sendMutex );
+void net::socketworker::doSend( const packet & packet ) {
+	_socket->async_write_some( asio::buffer( packet.begin( ), packet.size( ) ),
 
-			while (!_sendQueue.empty( )) {
-
-				asio::error_code ec;
-
-				packet& pkt = _sendQueue.front( );
-
-				short sPktSize = pkt.size( );
-				char* cPktSize = stoc( sPktSize );
-
-				// Send packet size
-				_socket->write_some( asio::buffer( cPktSize, 2 ), ec );
-				// Send packet
-				_socket->write_some( asio::buffer( pkt.begin( ), pkt.size( ) ), ec );
-
-				// Error handling
-				if (ec) {
-					disconnect( );
-					return;
-				}
-
-				_sendQueue.pop( );
-			}
-
-			// Wait for send queue to be populated
-			_sendCV.wait( lock );
+		[this]( asio::error_code ec, size_t size ) {
+		if (ec) {
+			disconnect( );
+			return;
 		}
-	}
+	} );
 }

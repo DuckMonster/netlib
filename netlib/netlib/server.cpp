@@ -132,7 +132,6 @@ void net::server::advanceCursor( ) {
 
     // Increment the cursor until it finds a nullptr OR the pointer points to a disconnected worker
     do {
-        //_workerArrayCursor = (_workerArrayCursor + 1) % _workerArray.size( );
-		_workerArrayCursor = (_workerArrayCursor + 1) % 2048;
+        _workerArrayCursor = (_workerArrayCursor + 1) % _workerArray.size( );
     } while (_workerArray[_workerArrayCursor] != nullptr && _workerArray[_workerArrayCursor]->connected( ));
 }

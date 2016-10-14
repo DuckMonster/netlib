@@ -49,8 +49,7 @@ namespace net {
 
         eventmanager					_eventMngr;
 
-		worker_ptr						_workerArray[2048];
-        //std::array<worker_ptr, 2048>	_workerArray;
+        std::array<worker_ptr, 2048>	_workerArray;
         size_t							_workerArrayCursor;
 
         std::thread						_acceptThread;
