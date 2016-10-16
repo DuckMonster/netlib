@@ -27,14 +27,20 @@ net::socketworker::socketworker( const socket_ptr& socket, const size_t socketID
 
 	_eventMngr( eventMngr ),
 
-	_recvBuffer( ) {
+	_sendMtx( ),
+	_sendCV( ),
+
+	_recvBuffer( ),
+	_sendBuffer( ),
+
+	_currentlySending( false ) {
 
 	// Set no-delay option
 	asio::ip::tcp::no_delay delay( true );
 	_socket->set_option( delay );
 
 	// Start up ASYNC yo
-	doRecv( );
+	doRecv( 0 );
 }
 
 net::socketworker::~socketworker( ) {
@@ -71,24 +77,55 @@ void net::socketworker::send( const packet& pkt ) {
 	doSend( pkt );
 }
 
-void net::socketworker::doRecv( ) {
-	_socket->async_read_some( asio::buffer( _recvBuffer, 2048 ),
+void net::socketworker::doRecv( const size_t index ) {
+	// Receive length
+	size_t length = 0;
 
-		[this]( asio::error_code ec, size_t size ) {
+	// Header of 2 bytes
+	if (index == 0) length = 2;
+	// Otherwise receive length specified by header
+	else length = ctos( _recvBuffer );
+
+	asio::async_read( *_socket, asio::buffer( _recvBuffer + index, length ),
+
+		[this, index]( asio::error_code ec, size_t size ) {
 		if (ec) {
 			disconnect( );
 			return;
 		}
 
-		_eventMngr.add( event( event::packetData( packet( _recvBuffer, size ), _id ) ) );
-		doRecv( );
+		// This was a header
+		if (index == 0)
+			doRecv( index + size );
+
+		// This was data
+		else {
+			_eventMngr.add( event( event::packetData( packet( _recvBuffer + 2, size ), _id ) ) );
+			doRecv( 0 );
+		}
 	} );
 }
 
 void net::socketworker::doSend( const packet & packet ) {
-	_socket->async_write_some( asio::buffer( packet.begin( ), packet.size( ) ),
+	std::unique_lock<std::mutex> lock( _sendMtx );
+
+	while (_currentlySending)
+		_sendCV.wait( lock );
+
+	short sSize = packet.size( );
+	char* header = stoc( sSize );
+
+	memcpy( _sendBuffer, header, 2 );
+	memcpy( _sendBuffer + 2, packet.begin( ), packet.size( ) );
+
+	_socket->async_write_some( asio::buffer( _sendBuffer, packet.size( ) + 2 ),
 
 		[this]( asio::error_code ec, size_t size ) {
+		std::unique_lock<std::mutex> lock( _sendMtx );
+
+		_currentlySending = false;
+		_sendCV.notify_one( );
+
 		if (ec) {
 			disconnect( );
 			return;

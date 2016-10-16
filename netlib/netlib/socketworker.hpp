@@ -29,7 +29,7 @@ namespace net {
         void                    send( const packet& pkt );
 
     private:
-		void					doRecv( );
+		void					doRecv( const size_t index );
 		void					doSend( const packet& packet );
 
         //----------------
@@ -40,7 +40,12 @@ namespace net {
 
         eventmanager&           _eventMngr;
 
+		std::mutex				_sendMtx;
+		std::condition_variable	_sendCV;
+
 		char					_recvBuffer[2048];
+		char					_sendBuffer[2048];
+		bool					_currentlySending;
     };
 
     typedef std::unique_ptr<socketworker> worker_ptr;
